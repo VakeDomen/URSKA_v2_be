@@ -1,37 +1,40 @@
-use ollama_rs::generation::completion::request::GenerationRequest;
+use ollama_rs::generation::{completion::request::GenerationRequest, parameters::{FormatType, JsonStructure}};
 
 
 #[derive(Debug, Clone)]
-pub struct Question {
+pub struct StructuredQuestion {
     system_prompt: String,
     question: String,
     context: Vec<String>,
     model: String,
+    format: JsonStructure,
 }
 
-impl From<String> for Question {
-    fn from(value: String) -> Self {
+impl From<(String, JsonStructure)> for StructuredQuestion {
+    fn from(values: (String, JsonStructure)) -> Self {
         Self {
             system_prompt: "You are a helpful assistant. Answer users question based on provided context.".to_owned(),
-            question: value,
+            question: values.0,
             context: vec![],
-            model: "mistral-nemo".to_owned(),
+            model: "phi4".to_owned(),
+            format: values.1,
         }
     }
 }
 
-impl From<&str> for Question {
-    fn from(value: &str) -> Self {
+impl From<(&str, JsonStructure)> for StructuredQuestion {
+    fn from(values: (&str, JsonStructure)) -> Self {
         Self {
             system_prompt: "You are a helpful assistant. Answer users question based on provided context.".to_owned(),
-            question: value.to_owned(),
+            question: values.0.to_owned(),
             context: vec![],
-            model: "mistral-nemo".to_owned(),
+            model: "phi4".to_owned(),
+            format: values.1,
         }
     }
 }
 
-impl Into<GenerationRequest> for Question {
+impl Into<GenerationRequest> for StructuredQuestion {
     fn into(self) -> GenerationRequest {
         let context = if self.context.is_empty() {
             "".to_string()
@@ -45,11 +48,14 @@ impl Into<GenerationRequest> for Question {
             self.question,
             context
         );
+
+        
         GenerationRequest::new(self.model, final_prompt)
+            .format(FormatType::StructuredJson(self.format))
     }
 }
 
-impl Question {
+impl StructuredQuestion {
     pub fn set_system_prompt(mut self, prompt: &str) -> Self {
         self.system_prompt = prompt.to_string();
         self

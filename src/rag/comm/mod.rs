@@ -2,16 +2,16 @@ use std::env;
 use ollama_rs::{
     error::OllamaError, 
     generation::{
-        completion::{GenerationResponse, GenerationResponseStream}, 
+        completion::{request::GenerationRequest, GenerationResponse, GenerationResponseStream}, 
         embeddings::{request::GenerateEmbeddingsRequest, GenerateEmbeddingsResponse}
     }, 
     Ollama
 };
-use question::Question;
 
 pub mod embedding;
 pub mod question;
 pub mod qdrant;
+pub mod structured_qustion;
 
 #[derive(Debug)]
 pub struct OllamaClient {
@@ -31,16 +31,28 @@ impl Default for OllamaClient {
 }
 
 impl OllamaClient {
-    pub async fn generate(&self, question: Question) -> Result<GenerationResponse, OllamaError> {
+    pub async fn generate<T>(&self, question: T) -> Result<GenerationResponse, OllamaError> where T: Into<GenerationRequest> {
         self.ollama.generate(question.into()).await
     }
 
-    pub async fn generate_stream(&self, question: Question) -> Result<GenerationResponseStream, OllamaError> {
+    pub async fn generate_stream<T>(&self, question: T) -> Result<GenerationResponseStream, OllamaError> where T: Into<GenerationRequest> {
         self.ollama.generate_stream(question.into()).await
     }
 
     pub async fn embed(&self, req: GenerateEmbeddingsRequest) -> Result<GenerateEmbeddingsResponse, OllamaError> {
         self.ollama.generate_embeddings(req).await
     }
+
+    pub async fn answer_all<T>(&self, questions: Vec<T>) -> Vec<String> where T: Into<GenerationRequest> {
+        let futures = questions.into_iter().map(|q| async move {
+            self.generate(q).await.ok()
+        });
+    
+        let results = futures::future::join_all(futures).await;
+        results.into_iter()
+            .map(|r| r.map_or_else(|| "".to_owned(), |resp| resp.response))
+            .collect()
+    }
+    
 }
  

@@ -9,11 +9,15 @@ use super::embedd_file::embedd_file;
 
 pub async fn prepare_for_upload<T>(file: ChunkedFile<T>, ollama: &OllamaClient) -> Result<Vec<EmbeddedChunk>> where T: Embeddable {
     let descr = file.syntetic_file_description.clone();
+    let tags: Vec<String> = match &file.tags {
+        Some(t) => t.clone(),
+        None => vec![],
+    };
     let embedded_file = embedd_file(file, ollama).await?;
     Ok(embedded_file
         .chunks
         .into_iter()
-        .filter_map(|c| c.prepare_for_upload(embedded_file.internal_id.to_string(), descr.clone()).ok())
+        .filter_map(|c| c.prepare_for_upload(embedded_file.internal_id.to_string(), descr.clone(), tags.clone()).ok())
         .flatten()
         .collect())
 }

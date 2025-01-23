@@ -1,7 +1,7 @@
 use ollama_rs::generation::embeddings::request::{EmbeddingsInput, GenerateEmbeddingsRequest};
 use regex::RegexBuilder;
 use anyhow::{Result, anyhow};
-use serde_json::Value;
+use serde_json::{json, Value};
 use crate::rag::comm::{embedding::{Embeddable, EmbeddingVector}, question::Question, OllamaClient};
 
 use super::{chunk::Chunk, embedded_chunk::EmbeddedChunk};
@@ -44,7 +44,7 @@ impl Embeddable for HypeChunk {
         self.embedding_vector = Some(embedding_vector);
     }
     
-    fn prepare_for_upload(self, parent_doc: String, doc_summary: Option<String>) -> Result<Vec<EmbeddedChunk>> {
+    fn prepare_for_upload(self, parent_doc: String, doc_summary: Option<String>, tags: Vec<String>) -> Result<Vec<EmbeddedChunk>> {
         let embedding_vectors = match self.embedding_vector {
             Some(v) => v,
             None => return Err(anyhow!("No embedding vectors on hype chunk")),
@@ -66,14 +66,18 @@ impl Embeddable for HypeChunk {
         } else {
             "".to_string()
         };
+
+        
         for (question, embedding_vector) in questions_with_embeddings.into_iter() {
+            let mut ins: Vec<String> = tags.iter().cloned().collect();
+            ins.insert(0, question.to_string());
             embedded_chunks.push(EmbeddedChunk {
                 embedding_vector,
                 id: uuid::Uuid::new_v4().to_string(),
                 doc_id: parent_doc.clone(),
                 doc_seq_num: self.seq_num,
                 content: self.text.clone(),
-                additional_data: Value::String(question.to_string()),
+                additional_data: json!(ins),
                 doc_summary: doc_summary.clone()
             });
         }

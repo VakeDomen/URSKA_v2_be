@@ -4,8 +4,9 @@ use crate::rag::{comm::{question::Question, OllamaClient}, models::{chunks::{Chu
 
 use super::summarize::summarize_document;
 
-pub async fn hype(file: ChunkedFile<Chunk>, ollama: &OllamaClient) -> ChunkedFile<HypeChunk> {
+pub async fn hype(mut file: ChunkedFile<Chunk>, ollama: &OllamaClient) -> ChunkedFile<HypeChunk> {
     let summary = summarize_document(&file, ollama).await;
+    file.syntetic_file_description = Some(summary.clone());
     let hype_question_prompts = generate_hype_prompt_questions(summary, &file);
     let hype_questions = ollama.answer_all(hype_question_prompts).await;
     let hype_chunks = generate_hype_chunks(&file.chunks, hype_questions);
@@ -56,14 +57,14 @@ fn generate_hype_chunks(chunks: &[Chunk], hype_questions: Vec<String>) -> Vec<Hy
 }
 
 fn generate_hype_prompt_questions(summary: String, file: &ChunkedFile<Chunk>) -> Vec<Question> {
-    let question = format!("You will be given a passage from a document, that talks about: {}\n Your task is to analyze the context text (passage) and \
+    let question = format!("You will be given a passage from a document from university of primorska, that talks about: {}\n Your task is to analyze the context text (passage) and \
         generate essential questions that, when answered, capture the main points and core meaning of the text. \
         The questions should be exhaustive and understandable without context. When possible, named entities should be referenced by their full name. \
         However add questions that are diverse in topic. \
         It is extremely important that you only answer with questions and each question should be written in its own line (separated by newline) with no prefix.\
         And finally the answer to each question has to be found in the final context passage.", 
         summary);
-    let system_prompt = "You are an agent specialized to only answer in form of questions.";
+    let system_prompt = "You are an agent specialized to only answer in form of questions that a student might ask.";
 
     file
         .chunks

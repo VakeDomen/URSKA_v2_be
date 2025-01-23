@@ -1,8 +1,7 @@
 use crate::rag::{
     loading::loaded_data::LoadedFile, 
-    models::{chunks::Chunk, ChunkedFile}};
+    models::{chunks::Chunk, ChunkedFile}, processing::{ChunkOverlap, ChunkSize}};
 
-use super::{ChunkOverlap, ChunkSize};
 
 pub fn simple_word_chunking(
     file: LoadedFile, 

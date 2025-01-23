@@ -25,7 +25,7 @@ impl Embeddable for Chunk {
         self.embedding_vector = Some(embedding_vectors[0].clone());
     }
     
-    fn prepare_for_upload(self, doc_id: String, doc_summary: Option<String>) -> Result<Vec<EmbeddedChunk>> {
+    fn prepare_for_upload(self, doc_id: String, doc_summary: Option<String>, _tags: Vec<String>) -> Result<Vec<EmbeddedChunk>> {
         let embedding_vector = match self.embedding_vector {
             Some(v) => v,
             None => return Err(anyhow!("No embedding vector on chunk")),

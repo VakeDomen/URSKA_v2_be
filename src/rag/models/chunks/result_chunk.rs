@@ -9,6 +9,7 @@ pub struct ResultChunk {
     pub doc_seq_num: i32,
     pub content: String,
     pub additional_data: Value,
+    pub doc_summary: String,
     pub score: f32,
 }
 
@@ -40,13 +41,47 @@ impl From<ScoredPoint> for ResultChunk {
             None => Value::Null.into(),
         };
 
+        let doc_summary: String = match value.payload.get("doc_summary") {
+            Some(d) => d.as_str().map_or("".into(), |v| v.into()),
+            None => "".into(),
+        };      
+
         Self {
             id,
             doc_id,
             doc_seq_num,
+            doc_summary,
             content,
             additional_data: additional_data.into(),
             score: value.score,
         }
+    }
+}
+
+impl ResultChunk {
+    pub fn to_prompt_chunk(&self) -> String {
+        let link = match &self.additional_data {
+            Value::Array(vec) => vec
+                .get(1)
+                .unwrap_or( &Value::String("None".into()))
+                .to_string(),
+            _ => "None".to_string()
+        };
+
+        
+        let link = if link.eq("None") {
+            "".to_string()
+        } else {
+            format!("\tPARENT DOCUMENT ADDITIONAL DATA: {}", link)
+        };
+        let doc_summary = &self.doc_summary;
+        
+        
+        format!(
+            "CHUNK:\n\tPARENT DOCUMENT DESCRIPTION:\n{}\n{}\n\n\tCHUNK CONTENTS: {}", 
+            doc_summary,
+            link,
+            self.content
+        )
     }
 }

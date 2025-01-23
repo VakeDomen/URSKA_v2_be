@@ -1,9 +1,10 @@
-use crate::rag::{comm::{question::Question, OllamaClient}, models::{chunks::ResultChunk, SearchResult}};
-use ollama_rs::{error::OllamaError, generation::completion::GenerationResponseStream};
+use crate::rag::{comm::{question::Question, structured_qustion::StructuredQuestion, OllamaClient}, models::{chunks::ResultChunk, SearchResult}};
+use ollama_rs::{error::OllamaError, generation::{completion::GenerationResponseStream, parameters::JsonStructure}};
+use schemars::{schema_for, JsonSchema};
 
 
 
-pub async fn prompt(prompt: String, chunks: Vec<ResultChunk>, ollama: &OllamaClient) -> Result<SearchResult, OllamaError> {
+pub async fn recursive_prompt(prompt: String, chunks: Vec<ResultChunk>, ollama: &OllamaClient) -> Result<SearchResult, OllamaError> {
     let llm_prompt = construct_prompt(prompt, &chunks);
     let stream: GenerationResponseStream = ollama.generate_stream(llm_prompt).await?;
     Ok(SearchResult {
@@ -12,8 +13,14 @@ pub async fn prompt(prompt: String, chunks: Vec<ResultChunk>, ollama: &OllamaCli
     })
 } 
 
+#[derive(Debug, JsonSchema)]
+pub struct TestFormat {
+    resp: String,
+    questions: Vec<String>,
+}
 
-fn construct_prompt(prompt: String, chunks: &Vec<ResultChunk>) -> Question {
+
+fn construct_prompt(prompt: String, chunks: &Vec<ResultChunk>) -> StructuredQuestion {
     let system_message = "You are an assistant who is helping students find information \
         about University of Primorska. Your name is Urška. Given a \
         question, help navigate through the files and the information. You are allowed to read \
@@ -32,7 +39,8 @@ fn construct_prompt(prompt: String, chunks: &Vec<ResultChunk>) -> Question {
         prompt
     );
 
+
     println!("{question}");
 
-    Question::from(question).set_system_prompt(&system_message)
+    StructuredQuestion::from((question, JsonStructure::new::<TestFormat>())).set_system_prompt(&system_message)
 }
